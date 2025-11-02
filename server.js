@@ -25,8 +25,24 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const jsonParser = bodyParser.json();
+const urlencodedParser = bodyParser.urlencoded({ extended: true });
+
+app.use((req, res, next) => {
+  if (req.originalUrl === '/stripe/webhook') {
+    return next();
+  }
+
+  return jsonParser(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.originalUrl === '/stripe/webhook') {
+    return next();
+  }
+
+  return urlencodedParser(req, res, next);
+});
 
 // Raw body for webhooks
 app.use('/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
@@ -76,6 +92,10 @@ app.post('/', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).send('GPT Paywall API is running.');
 });
+
+// Fallback error handlers
+app.use(notFound);
+app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 8080;
