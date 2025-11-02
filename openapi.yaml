@@ -71,6 +71,94 @@ components:
         error:
           type: string
           description: Error message
+    AirtableRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        createdTime:
+          type: string
+          format: date-time
+        fields:
+          type: object
+          additionalProperties: true
+    EmailRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+    CreateRecordRequest:
+      allOf:
+        - $ref: '#/components/schemas/EmailRequest'
+        - type: object
+          properties:
+            fields:
+              type: object
+              additionalProperties: true
+              description: Additional Airtable fields to set when creating the record
+    UpdateSubscriptionRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        recordId:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+        subscriptionStart:
+          type: string
+          format: date-time
+        subscriptionEnd:
+          type: string
+          format: date-time
+        fields:
+          type: object
+          additionalProperties: true
+      description: Either recordId or email must be provided.
+    StartSubscriptionRequest:
+      allOf:
+        - $ref: '#/components/schemas/EmailRequest'
+        - type: object
+          properties:
+            plan:
+              type: string
+            status:
+              type: string
+              default: active
+            subscriptionStart:
+              type: string
+              format: date-time
+            subscriptionEnd:
+              type: string
+              format: date-time
+            fields:
+              type: object
+              additionalProperties: true
+    CheckEmailResponse:
+      type: object
+      properties:
+        exists:
+          type: boolean
+        record:
+          $ref: '#/components/schemas/AirtableRecord'
+    RecordResponse:
+      type: object
+      properties:
+        record:
+          $ref: '#/components/schemas/AirtableRecord'
+    StartSubscriptionResponse:
+      allOf:
+        - $ref: '#/components/schemas/RecordResponse'
+        - type: object
+          properties:
+            created:
+              type: boolean
 paths:
   /api/check-access:
     get:
@@ -185,3 +273,145 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/check-email:
+    post:
+      summary: Check if an Airtable record exists for an email
+      operationId: checkEmail
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        "200":
+          description: Whether the record exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckEmailResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/create-record:
+    post:
+      summary: Create a new Airtable record for an email
+      operationId: createRecord
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecordRequest'
+      responses:
+        "201":
+          description: Record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Record already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/update-subscription:
+    post:
+      summary: Update subscription metadata for an Airtable record
+      operationId: updateSubscription
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubscriptionRequest'
+      responses:
+        "200":
+          description: Record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/start-subscription:
+    post:
+      summary: Create or update an Airtable record with subscription details
+      operationId: startSubscription
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSubscriptionRequest'
+      responses:
+        "200":
+          description: Subscription updated for an existing record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartSubscriptionResponse'
+        "201":
+          description: Subscription started and record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartSubscriptionResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
