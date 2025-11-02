@@ -1,13 +1,12 @@
+const express = require('express');
+const cors = require('cors');
+
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
-const express = require('express');
-const cors = require('cors');
-
-const accessRoutes = require('./src/routes/access');
-const stripeRoutes = require('./src/routes/stripe');
-const { errorHandler, notFound } = require('./src/middleware/errorHandler');
+const stripeRoutes = require('../src/routes/stripe');
+const { errorHandler, notFound } = require('../src/middleware/errorHandler');
 
 const app = express();
 
@@ -46,7 +45,7 @@ const apiKeyMiddleware = (req, res, next) => {
 
   const requestPath = req.originalUrl || req.path;
 
-  if (requestPath === '/' || requestPath === '/stripe/webhook') {
+  if (requestPath === '/stripe/webhook') {
     next();
     return;
   }
@@ -67,23 +66,9 @@ const apiKeyMiddleware = (req, res, next) => {
 };
 
 app.use(apiKeyMiddleware);
-
-app.use('/api', accessRoutes);
 app.use('/stripe', stripeRoutes);
-
-app.post('/', (req, res) => {
-  res.status(200).send('OK');
-});
-
-app.get('/', (req, res) => {
-  res.status(200).send('GPT Paywall API is running.');
-});
 
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`⚡️ Server running on port ${PORT}`);
-});
+module.exports = app;

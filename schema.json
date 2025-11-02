@@ -1,0 +1,299 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Custom GPT API",
+    "version": "1.0.0",
+    "description": "Endpoints for managing GPT paywall access and Stripe billing."
+  },
+  "servers": [
+    {
+      "url": "https://custom-gpt-api.vercel.app"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "AccessResponse": {
+        "type": "object",
+        "properties": {
+          "has_access": { "type": "boolean" },
+          "plan": { "type": "string", "nullable": true },
+          "status": { "type": "string", "nullable": true },
+          "current_period_end": { "type": "string", "format": "date-time", "nullable": true },
+          "record_id": { "type": "string", "nullable": true }
+        }
+      },
+      "EmailRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "CheckEmailResponse": {
+        "type": "object",
+        "properties": {
+          "exists": { "type": "boolean" },
+          "record": { "type": "object" }
+        }
+      },
+      "CreateRecordRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/EmailRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "fields": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        ]
+      },
+      "RecordResponse": {
+        "type": "object",
+        "properties": {
+          "record": { "type": "object" }
+        }
+      },
+      "UpdateSubscriptionRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "recordId": { "type": "string" },
+          "plan": { "type": "string" },
+          "status": { "type": "string" },
+          "subscriptionStart": { "type": "string", "format": "date-time" },
+          "subscriptionEnd": { "type": "string", "format": "date-time" },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "StartSubscriptionRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/EmailRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "plan": { "type": "string" },
+              "status": { "type": "string", "default": "active" },
+              "subscriptionStart": { "type": "string", "format": "date-time" },
+              "subscriptionEnd": { "type": "string", "format": "date-time" },
+              "fields": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        ]
+      },
+      "StartSubscriptionResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/RecordResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "created": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "priceId": { "type": "string" },
+          "successUrl": { "type": "string" },
+          "cancelUrl": { "type": "string" },
+          "successPath": { "type": "string" },
+          "cancelPath": { "type": "string" }
+        }
+      },
+      "CheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      },
+      "PortalRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "customerId": { "type": "string" },
+          "returnUrl": { "type": "string" },
+          "returnPath": { "type": "string" }
+        }
+      },
+      "PortalResponse": {
+        "type": "object",
+        "properties": {
+          "portal_url": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/api/check-access": {
+      "get": {
+        "summary": "Check if a user has premium access",
+        "security": [{ "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "schema": { "type": "string", "format": "email" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Access status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccessResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/check-email": {
+      "post": {
+        "summary": "Check if an Airtable record exists for an email",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Whether the record exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckEmailResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/create-record": {
+      "post": {
+        "summary": "Create a new Airtable record",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRecordRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Record created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "409": { "description": "Conflict", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/update-subscription": {
+      "post": {
+        "summary": "Update Airtable subscription details",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateSubscriptionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Record updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Record not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/start-subscription": {
+      "post": {
+        "summary": "Create or update a subscription record",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StartSubscriptionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Record updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartSubscriptionResponse" } } } },
+          "201": { "description": "Record created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartSubscriptionResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/stripe/create-checkout-session": {
+      "post": {
+        "summary": "Create a Stripe checkout session",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CheckoutRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Checkout session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckoutResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/stripe/create-portal-session": {
+      "post": {
+        "summary": "Create a Stripe billing portal session",
+        "security": [{ "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PortalRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Portal session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortalResponse" } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Customer not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    }
+  }
+}
