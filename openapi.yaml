@@ -1,0 +1,187 @@
+openapi: 3.1.0
+info:
+  title: GPT Paywall API
+  version: 1.0.0
+  description: API for managing GPT paywall access and payments
+servers:
+  - url: https://your-domain.com
+components:
+  securitySchemes:
+    gptApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    AccessResponse:
+      type: object
+      properties:
+        has_access: 
+          type: boolean
+          description: Whether the user has premium access
+        plan: 
+          type: string
+          nullable: true
+          description: Current plan name
+        status: 
+          type: string
+          nullable: true
+          description: Subscription status
+        current_period_end: 
+          type: string
+          nullable: true
+          format: date-time
+          description: When the current billing period ends
+    CheckoutRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+        plan:
+          type: string
+          default: "pro"
+          description: Subscription plan
+    CheckoutResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Stripe checkout session ID
+    PortalRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+    PortalResponse:
+      type: object
+      properties:
+        portal_url:
+          type: string
+          description: URL to Stripe customer portal
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+paths:
+  /api/check-access:
+    get:
+      summary: Check if a user has premium access
+      operationId: checkAccess
+      security:
+        - gptApiKey: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+          description: User email address
+      responses:
+        "200":
+          description: Access status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /stripe/create-checkout-session:
+    post:
+      summary: Create a Stripe checkout session
+      operationId: createCheckoutSession
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /stripe/create-portal-session:
+    post:
+      summary: Create a Stripe customer portal session
+      operationId: createPortalSession
+      security:
+        - gptApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortalRequest"
+      responses:
+        "200":
+          description: Portal session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
