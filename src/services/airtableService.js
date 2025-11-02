@@ -1,6 +1,7 @@
 const Airtable = require('airtable');
 
 const {
+  AIRTABLE_API_KEY,
   AIRTABLE_TOKEN,
   AIRTABLE_BASE_ID,
   AIRTABLE_TABLE_NAME,
@@ -14,12 +15,14 @@ const {
 let tableInstance;
 
 function getTable() {
-  if (!AIRTABLE_TOKEN || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_NAME) {
-    throw new Error('Airtable configuration is missing. Please set AIRTABLE_TOKEN, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_NAME.');
+  const apiKey = AIRTABLE_API_KEY || AIRTABLE_TOKEN;
+
+  if (!apiKey || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_NAME) {
+    throw new Error('Airtable configuration is missing. Please set AIRTABLE_API_KEY (or AIRTABLE_TOKEN), AIRTABLE_BASE_ID, and AIRTABLE_TABLE_NAME.');
   }
 
   if (!tableInstance) {
-    const base = new Airtable({ apiKey: AIRTABLE_TOKEN }).base(AIRTABLE_BASE_ID);
+    const base = new Airtable({ apiKey }).base(AIRTABLE_BASE_ID);
     tableInstance = base(AIRTABLE_TABLE_NAME);
   }
 
